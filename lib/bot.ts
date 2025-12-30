@@ -125,6 +125,16 @@ bot.callbackQuery(/^take_all_time_(.+)$/, async (ctx) => {
     const timeKey = ctx.match[1]
     const telegramId = BigInt(ctx.from!.id)
 
+    // Normalize time format (e.g., "7:00" -> "07:00")
+    const normalizeTime = (t: string): string => {
+        const parts = t.split(':')
+        if (parts.length !== 2) return t
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
+    }
+    const normalizedTimeKey = normalizeTime(timeKey)
+
+    console.log(`[TakeAllTime] Callback triggered for time=${timeKey}, normalized=${normalizedTimeKey}`)
+
     try {
         const user = await prisma.user.findUnique({
             where: { telegramId },
@@ -136,9 +146,12 @@ bot.callbackQuery(/^take_all_time_(.+)$/, async (ctx) => {
             if (!m.times) return false
             try {
                 const times = JSON.parse(m.times) as string[]
-                return times.includes(timeKey)
+                // Normalize all times before comparison
+                return times.some(t => normalizeTime(t) === normalizedTimeKey)
             } catch { return false }
         })
+
+        console.log(`[TakeAllTime] Found ${activeMeds.length} meds for ${normalizedTimeKey}`)
 
         const today = getStartOfDay()
 
@@ -149,16 +162,19 @@ bot.callbackQuery(/^take_all_time_(.+)$/, async (ctx) => {
                     medicationId: med.id,
                     timestamp: { gte: today },
                     action: "TAKEN",
-                    scheduledTime: timeKey
+                    scheduledTime: normalizedTimeKey
                 }
             })
 
             if (!alreadyTaken) {
-                await MedicationService.takeDose(med.id, timeKey)
+                await MedicationService.takeDose(med.id, normalizedTimeKey)
+                console.log(`[TakeAllTime] Logged TAKEN for ${med.name} at ${normalizedTimeKey}`)
+            } else {
+                console.log(`[TakeAllTime] Already taken: ${med.name} at ${normalizedTimeKey}`)
             }
         }
         await ctx.answerCallbackQuery("Todos tomados! ✅")
-        await ctx.editMessageText(`✅ **Todos os remédios das ${timeKey} foram tomados!**\n\nContinue assim, campeão! 💪`, { parse_mode: "Markdown" })
+        await ctx.editMessageText(`✅ **Todos os remédios das ${normalizedTimeKey} foram tomados!**\n\nContinue assim, campeão! 💪`, { parse_mode: "Markdown" })
     } catch (e) {
         console.error("Take All Error", e)
         await ctx.answerCallbackQuery("Erro ao registrar.")
@@ -168,6 +184,14 @@ bot.callbackQuery(/^take_all_time_(.+)$/, async (ctx) => {
 bot.callbackQuery(/^discard_all_time_(.+)$/, async (ctx) => {
     const timeKey = ctx.match[1]
     const telegramId = BigInt(ctx.from!.id)
+
+    // Normalize time format
+    const normalizeTime = (t: string): string => {
+        const parts = t.split(':')
+        if (parts.length !== 2) return t
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
+    }
+    const normalizedTimeKey = normalizeTime(timeKey)
 
     try {
         const user = await prisma.user.findUnique({
@@ -180,15 +204,15 @@ bot.callbackQuery(/^discard_all_time_(.+)$/, async (ctx) => {
             if (!m.times) return false
             try {
                 const times = JSON.parse(m.times) as string[]
-                return times.includes(timeKey)
+                return times.some(t => normalizeTime(t) === normalizedTimeKey)
             } catch { return false }
         })
 
         for (const med of activeMeds) {
-            await MedicationService.skipDose(med.id, timeKey)
+            await MedicationService.skipDose(med.id, normalizedTimeKey)
         }
         await ctx.answerCallbackQuery("Todos descartados.")
-        await ctx.editMessageText(`🗑️ **Notificações das ${timeKey} descartadas.**`, { parse_mode: "Markdown" })
+        await ctx.editMessageText(`🗑️ **Notificações das ${normalizedTimeKey} descartadas.**`, { parse_mode: "Markdown" })
     } catch (e) {
         console.error("Discard All Error", e)
     }
