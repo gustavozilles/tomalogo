@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+
+set password "FTFtjpbfEXtUuTifpHqm"
+set ip "135.181.97.102"
+
+spawn ssh -o StrictHostKeyChecking=accept-new root@$ip "ls -F"
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "root@" {
+        puts "SUCCESS"
+    }
+    eof {
+        puts "EOF REACHED"
+    }
+}

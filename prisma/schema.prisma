@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  telegramId   BigInt       @unique
+  username     String?
+  firstName    String?
+  phoneNumber  String?      // For Twilio calls (+55...)
+  naggingInterval Int         @default(30) // Minutes between voice escalations (30 or 60)
+  timezone     String       @default("America/Sao_Paulo")
+  homeLat      Float?
+  homeLon      Float?
+  doctorPhone  String?
+  createdAt    DateTime     @default(now())
+  
+  medications  Medication[]
+  logs         ActionLog[]
+}
+
+model Medication {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  name            String
+  dosage          String?  // e.g. "10mg"
+  inventory       Int      @default(0)
+  lowStockThreshold Int    @default(5)
+  
+  // Schedule
+  frequency       String?  // Cron-like or descriptive: "DAILY", "8h"
+  times           String?  // JSON array of times ["08:00", "20:00"]
+  
+  // Prescription
+  prescriptionExpiry DateTime?
+  
+  remindAtHome    Boolean  @default(false)
+  logs            ActionLog[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ActionLog {
+  id            String      @id @default(cuid())
+  userId        String
+  medicationId  String
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication    Medication  @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  
+  action        String      // "TAKEN", "SNOOZED", "MISSED", "REFILL", "AUDIT"
+  timestamp     DateTime    @default(now())
+  details       String?     // e.g. "Snoozed for 30m"
+  scheduledTime String?     // The specific dosage time being handled (e.g., "08:00")
+
+  @@index([medicationId, timestamp]) // Optimize scheduler lookups
+}

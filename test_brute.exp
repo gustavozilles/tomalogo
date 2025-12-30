@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+
+set passwords {
+    "FTFtjpbfEXtUuTifpHqm"
+    " FTFtjpbfEXtUuTifpHqm"
+    "FTFtjpbfEXtUuTifpHqm "
+    "voa1987"
+}
+set ip "135.181.97.102"
+
+foreach pwd $passwords {
+    puts "Trying password: '$pwd'"
+    spawn ssh -o StrictHostKeyChecking=accept-new -o NumberOfPasswordPrompts=1 root@$ip "ls"
+    expect {
+        "password:" {
+            send "$pwd\r"
+            expect {
+                "Permission denied" {
+                    puts "FAILED"
+                }
+                "root@" {
+                    puts "SUCCESS"
+                    exit
+                }
+                eof {
+                    puts "EOF"
+                }
+            }
+        }
+        "root@" {
+             puts "SUCCESS (already in?)"
+             exit
+        }
+    }
+}
