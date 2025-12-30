@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { AddMedModal } from './components/modals/AddMedModal'
 import { EditMedModal } from './components/modals/EditMedModal'
 import { SettingsModal } from './components/modals/SettingsModal'
+import { InventoryBar } from './components/InventoryBar'
 
 interface UserData {
     firstName: string | null
@@ -21,6 +22,10 @@ interface Med {
     dosage: string
     inventory: number
     times: string | null // JSON string
+}
+
+interface MedWithTime extends Med {
+    scheduledTime: string
 }
 
 function MedsList() {
@@ -61,17 +66,41 @@ function MedsList() {
         })
     )).sort() as string[]
 
+    // Group medications by scheduled time
+    const groupedByTime = new Map<string, MedWithTime[]>()
+    const noTimeMeds: Med[] = []
+
+    for (const med of meds) {
+        let times: string[] = []
+        try {
+            if (med.times) times = JSON.parse(med.times)
+        } catch { }
+
+        if (!times || times.length === 0) {
+            noTimeMeds.push(med)
+        } else {
+            for (const time of times) {
+                if (!groupedByTime.has(time)) {
+                    groupedByTime.set(time, [])
+                }
+                groupedByTime.get(time)!.push({ ...med, scheduledTime: time })
+            }
+        }
+    }
+
+    // Sort time slots chronologically
+    const sortedTimes = Array.from(groupedByTime.keys()).sort()
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8 font-sans text-gray-900 pb-24">
 
             {/* Header / Greeting */}
-            <header className="mb-8 flex justify-between items-start">
+            <header className="mb-6 flex justify-between items-start">
                 <div>
                     <p className="text-blue-600 font-semibold mb-1">Que bom te ver por aqui!</p>
                     <h1 className="text-3xl font-extrabold tracking-tight">
                         Oi, {user?.firstName || 'Campeão'}! 👋
                     </h1>
-                    <p className="text-gray-500 mt-1">Aqui está o resumo dos seus remédios.</p>
                 </div>
                 <button
                     onClick={() => setShowSettings(true)}
@@ -81,65 +110,85 @@ function MedsList() {
                 </button>
             </header>
 
-            {/* Stats / Quick Summary */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/40 shadow-sm transition hover:shadow-md cursor-pointer">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>
-                    <p className="text-2xl font-black text-blue-600">{meds.length}</p>
-                </div>
-                <div
-                    onClick={() => setShowAddForm(true)}
-                    className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-200 flex flex-col justify-center items-center text-white active:scale-95 transition cursor-pointer"
-                >
-                    <span className="text-2xl font-bold">+</span>
-                    <span className="text-xs font-bold uppercase">Novo</span>
-                </div>
+            {/* Add Button */}
+            <div
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-center gap-2 text-white active:scale-95 transition cursor-pointer mb-6"
+            >
+                <span className="text-xl font-bold">+</span>
+                <span className="font-bold">Adicionar Medicamento</span>
             </div>
 
-            {/* List */}
-            <div className="space-y-4">
-                {meds.map(med => {
-                    let timesDisplay = "Sem horário"
-                    try {
-                        if (med.times) {
-                            const t = JSON.parse(med.times)
-                            if (Array.isArray(t) && t.length > 0) timesDisplay = t.join(" • ")
-                        }
-                    } catch { }
-
-                    const isLow = med.inventory <= 15
-
-                    return (
-                        <div key={med.id} className="group relative overflow-hidden bg-white/80 backdrop-blur-lg rounded-3xl p-5 border border-white shadow-sm hover:shadow-xl transition-all duration-300">
-                            {isLow && <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-tighter">Estoque Baixo</div>}
-
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex-1">
-                                    <h2 className="text-xl font-bold text-gray-800">{med.name}</h2>
-                                    <p className="text-sm font-medium text-gray-400">{med.dosage}</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`text-2xl font-black ${isLow ? 'text-red-500' : 'text-blue-600'}`}>
-                                        {med.inventory}
-                                    </span>
-                                    <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-widest">Unidades</span>
-                                </div>
+            {/* Time-grouped List */}
+            <div className="space-y-6">
+                {sortedTimes.map(time => (
+                    <div key={time}>
+                        {/* Time Header */}
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-md">
+                                ⏰ {time}
                             </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold">
-                                    <span>⏰</span> {timesDisplay}
-                                </div>
-                                <button
-                                    onClick={() => setEditingMed(med)}
-                                    className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition"
-                                >
-                                    Editar
-                                </button>
-                            </div>
+                            <div className="flex-1 h-px bg-blue-200" />
                         </div>
-                    )
-                })}
+
+                        {/* Meds for this time */}
+                        <div className="space-y-3">
+                            {groupedByTime.get(time)!.map((med, idx) => {
+                                const isLow = med.inventory <= 15
+
+                                return (
+                                    <div
+                                        key={`${med.id}-${time}-${idx}`}
+                                        onClick={() => setEditingMed(med)}
+                                        className="group relative bg-white/80 backdrop-blur-lg rounded-2xl p-4 border border-white shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+                                    >
+                                        {isLow && <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-bl-xl uppercase">Baixo</div>}
+
+                                        <div className="flex justify-between items-center mb-2">
+                                            <div>
+                                                <h2 className="text-lg font-bold text-gray-800">{med.name}</h2>
+                                                <p className="text-xs font-medium text-gray-400">{med.dosage}</p>
+                                            </div>
+                                        </div>
+
+                                        <InventoryBar current={med.inventory} />
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                ))}
+
+                {/* Meds without time */}
+                {noTimeMeds.length > 0 && (
+                    <div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="bg-gray-400 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-md">
+                                📦 Sem horário
+                            </div>
+                            <div className="flex-1 h-px bg-gray-200" />
+                        </div>
+
+                        <div className="space-y-3">
+                            {noTimeMeds.map(med => (
+                                <div
+                                    key={med.id}
+                                    onClick={() => setEditingMed(med)}
+                                    className="group relative bg-white/60 backdrop-blur-lg rounded-2xl p-4 border border-white/50 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer opacity-70"
+                                >
+                                    <div className="flex justify-between items-center mb-2">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-gray-600">{med.name}</h2>
+                                            <p className="text-xs font-medium text-gray-400">{med.dosage}</p>
+                                        </div>
+                                    </div>
+
+                                    <InventoryBar current={med.inventory} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {meds.length === 0 && !showAddForm && (
                     <div className="text-center py-20 opacity-30 grayscale">
