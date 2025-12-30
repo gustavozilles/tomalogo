@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💊 TomaLogoBot
 
-## Getting Started
+> **O assistente de TDAH que não te deixa esquecer de tomar seus remédios.**
 
-First, run the development server:
+Um sistema completo de lembretes de medicação com notificações via Telegram, escalação por chamada de voz (Twilio), e gestão de estoque via web app.
+
+---
+
+## ✨ Features
+
+| Feature | Descrição |
+|---------|-----------|
+| 🔔 **Lembretes Inteligentes** | Notificações no horário exato, agrupadas por dose |
+| 📞 **Escalação por Voz** | Ligação automática via Twilio se você não responder |
+| 📦 **Gestão de Estoque** | Acompanhe quantos comprimidos restam |
+| 📍 **GPS Home Snooze** | "Lembra quando eu chegar em casa" |
+| 🩺 **Link pro Médico** | Botão direto pro WhatsApp do médico quando estoque baixar |
+| 🌐 **Web App** | Interface amigável pra gerenciar tudo |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Bot:** [grammY](https://grammy.dev/) (Telegram Bot API)
+- **Web App:** Next.js 16 + React
+- **Database:** SQLite + Prisma ORM
+- **Voice Calls:** Twilio IVR
+- **Scheduler:** Node.js setInterval (1 min tick)
+- **Deploy:** PM2 on Hetzner VPS
+
+---
+
+## 📦 Instalação
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone o repositório
+git clone https://github.com/gustavozilles/tomalogo.git
+cd tomalogo
+
+# Instale dependências
+npm install
+
+# Configure o banco
+npx prisma db push
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas credenciais
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Variáveis de Ambiente
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+TELEGRAM_BOT_TOKEN=seu_token_do_botfather
+TWILIO_ACCOUNT_SID=seu_sid
+TWILIO_AUTH_TOKEN=seu_token
+TWILIO_PHONE_NUMBER=+1234567890
+PUBLIC_URL=seu_ip_ou_dominio
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🚀 Rodando
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Dev (bot + web)
+npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Produção
+npm run build
+pm2 start 'npx tsx --env-file=.env scripts/dev-bot.ts' --name 'toma-bot'
+pm2 start 'npm run start' --name 'toma-web'
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📱 Comandos do Bot
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Comando | Ação |
+|---------|------|
+| `/start` | Inicia o bot |
+| `/remedios` | Lista todos os remédios |
+| `/add Nome Dose Qtd` | Adiciona remédio rápido |
+| `/casa` | Configura localização de casa |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📸 Screenshots
+
+*Coming soon*
+
+---
+
+## 🏷️ Versões
+
+| Tag | Descrição |
+|-----|-----------|
+| `v1.0-alpha` | Primeira versão estável com copywriting refresh e fix de horário |
+
+---
+
+## 👨‍💻 Autor
+
+Feito com 💙 por [@gustavozilles](https://github.com/gustavozilles)
+
+---
+
+## 📄 Licença
+
+MIT
