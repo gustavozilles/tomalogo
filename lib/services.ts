@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { getStartOfDay } from './utils'
 
 export class MedicationService {
     /**
@@ -138,8 +139,7 @@ export class MedicationService {
      * Prevents N+1 query problem in scheduler.
      */
     static async getDailyLogs(medIds: string[]) {
-        const startOfDay = new Date()
-        startOfDay.setHours(0, 0, 0, 0)
+        const startOfDay = getStartOfDay()
 
         return prisma.actionLog.findMany({
             where: {

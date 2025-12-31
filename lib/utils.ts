@@ -11,7 +11,9 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 
 export function getStartOfDay(date: Date = new Date()) {
     const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
+    // Set to 03:00 UTC, which corresponds to 00:00 BRT (UTC-3)
+    // This ensures we ignore doses from the previous night (e.g. 21:00 BRT = 00:00 UTC)
+    start.setUTCHours(3, 0, 0, 0);
     return start;
 }
 
