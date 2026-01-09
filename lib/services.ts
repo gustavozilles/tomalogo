@@ -168,9 +168,12 @@ export class MedicationService {
 
         return logs.some(log => {
             if (log.medicationId !== medId) return false
+
+            // If log has no scheduledTime, it should NOT match any specific time
+            if (!log.scheduledTime) return false
+
             const logTime = normalizeTime(log.scheduledTime)
-            // Match if times are equal, OR if log has no scheduledTime (legacy entry counts for any)
-            return logTime === targetTime || (!log.scheduledTime && log.medicationId === medId)
+            return logTime === targetTime
         })
     }
 }
